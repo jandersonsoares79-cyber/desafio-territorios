@@ -1,93 +1,100 @@
 /**
- * Desafio: Sistema de Inventário (Mochila de Loot)
+ * Desafio: Tetris Stack - Fila de Peças
  *
- * Este programa simula um inventário de jogo com capacidade para 10 itens.
- * Ele utiliza uma lista sequencial (vetor) de structs 'Item'.
- * O usuário pode interagir através de um menu para:
- * 1. Inserir um novo item (se houver espaço).
- * 2. Remover um item (buscando pelo nome).
- * 3. Listar todos os itens no inventário.
- * 4. Buscar um item específico (buscando pelo nome).
+ * Este programa simula a "fila de próximas peças" de um jogo
+ * similar ao Tetris, utilizando uma estrutura de dados de 
+ * Fila Circular.
+ *
+ * O programa inicializa a fila com 5 peças geradas 
+ * automaticamente e, em seguida, permite ao usuário:
+ * 1. Jogar a próxima peça (dequeue - remover do início).
+ * 2. Inserir uma nova peça (enqueue - adicionar ao fim), se houver espaço.
+ * 0. Sair do jogo.
+ *
+ * O estado da fila é exibido a cada turno.
  *
  * Conceitos aplicados:
- * - Structs: Para definir o 'Item' (nome, tipo, quantidade).
- * - Vetor de Structs: Para armazenar o inventário (lista sequencial).
+ * - Structs: Para definir a 'Peca' (nome, id).
+ * - Fila Circular: Implementada com um vetor, 'inicio', 'fim' e 'contador'.
+ * Isso é eficiente, pois 'dequeue' (jogar) não exige mover
+ * todos os elementos (como no desafio do inventário).
  * - Modularização: Funções com responsabilidades únicas.
- * - Busca Sequencial: Implementada para encontrar itens pelo nome.
- * - Manipulação de Vetor: Inserção no final e remoção com "shift-left".
+ * - Geração de Dados: Peças geradas automaticamente.
  */
 
 // 1. Bibliotecas necessárias
-#include <stdio.h>  // Para printf(), scanf() (entrada/saída)
-#include <stdlib.h> // Para system("clear") ou system("cls") (limpar tela)
-#include <string.h> // Para strcmp() (comparar strings) e strcpy() (copiar strings)
+#include <stdio.h>  // Para printf(), scanf()
+#include <stdlib.h> // Para rand(), srand() e exit()
+#include <time.h>   // Para time() (semente do rand)
 
 // 2. Constantes e Definições Globais
-#define MAX_ITENS 10 // Capacidade máxima da mochila
+#define TAMANHO_FILA 5 // Tamanho fixo da fila de peças
 
-// 3. Criação da struct:
-// Define a estrutura 'Item' para agrupar os dados
-struct Item {
-    char nome[30];
-    char tipo[20];
-    int quantidade;
-};
+// 3. Definição da struct (Atributos das peças)
+typedef struct {
+    char nome; // Tipo da peça ('I', 'O', 'T', 'L')
+    int id;    // Identificador único
+} Peca;
 
-// 4. Vetor de structs (Variáveis Globais):
-// Cria o vetor 'mochila' (nosso inventário) e um contador
-struct Item mochila[MAX_ITENS];
-int totalItens = 0; // Controla a quantidade ATUAL de itens na mochila
+// 4. Variáveis Globais para a Fila Circular
+Peca filaDePecas[TAMANHO_FILA]; // O vetor que armazena a fila
+int inicio = 0;    // Índice do PRIMEIRO elemento (para remover)
+int fim = 0;       // Índice da PRÓXIMA POSIÇÃO VAZIA (para inserir)
+int contador = 0;  // Quantidade de elementos ATUALMENTE na fila
+int proximoId = 0; // Contador global para gerar IDs únicos
 
-// 5. Protótipos das funções obrigatórias
-void inserirItem();
-void removerItem();
-void listarItens();
-void buscarItem();
-
-// Protótipo da função auxiliar de busca (boa prática)
-int buscarIndicePorNome(const char* nomeBusca);
-void limparTela(); // Função de utilidade (Usabilidade)
+// 5. Protótipos das funções
+void inserirPecaFila(); // Enqueue
+void jogarPeca();       // Dequeue
+void exibirFila();
+Peca gerarPeca();       // Função helper solicitada
+void limparTela();
 
 /**
  * Função: main
  * Ponto de entrada do programa.
  * Responsável por:
- * 1. Exibir o menu principal de opções.
- * 2. Ler a escolha do usuário.
- * 3. Chamar a função correspondente (modularização).
- * 4. Controlar o loop principal do programa (continua até o usuário sair).
+ * 1. Inicializar o gerador de números aleatórios (srand).
+ * 2. Preencher a fila inicial com 5 peças.
+ * 3. Exibir o menu principal e controlar o loop do jogo.
+ * 4. Chamar as funções corretas com base na escolha do usuário.
  */
 int main() {
+    // 1. Inicializa o gerador aleatório
+    srand(time(NULL));
+
     int opcao;
 
-    // Loop principal do menu
+    // 2. Inicializa a fila (requisito funcional)
+    printf("Inicializando a fila de pecas...\n");
+    for (int i = 0; i < TAMANHO_FILA; i++) {
+        inserirPecaFila();
+    }
+
+    // 3. Loop principal do menu
     do {
         limparTela();
-        printf("--- INVENTARIO DA MOCHILA (Capacidade: %d/%d) ---\n", totalItens, MAX_ITENS);
-        printf("1. Adicionar Item\n");
-        printf("2. Remover Item\n");
-        printf("3. Listar Itens\n");
-        printf("4. Buscar Item\n");
-        printf("0. Sair do Jogo\n");
-        printf("----------------------------------------------\n");
-        printf("Escolha uma opcao: ");
+        printf("--- Tetris Stack ---\n");
         
-        // Lê a opção do usuário
+        // Exibe o estado atual da fila (requisito)
+        exibirFila();
+
+        // Exibe o menu de opções (Exemplo de saída)
+        printf("\nOpcoes de acao:\n");
+        printf("1. Jogar peca (dequeue)\n");
+        printf("2. Inserir nova peca (enqueue)\n");
+        printf("0. Sair\n");
+        printf("Escolha uma opcao: ");
+
         scanf("%d", &opcao);
 
-        // Estrutura switch para chamar a função correta
+        // 4. Processa a escolha do usuário
         switch (opcao) {
             case 1:
-                inserirItem();
+                jogarPeca();
                 break;
             case 2:
-                removerItem();
-                break;
-            case 3:
-                listarItens();
-                break;
-            case 4:
-                buscarItem();
+                inserirPecaFila();
                 break;
             case 0:
                 printf("\nSaindo do jogo... Ate mais!\n");
@@ -99,213 +106,128 @@ int main() {
         // Pausa para o usuário ler a saída antes de limpar a tela
         if (opcao != 0) {
             printf("\nPressione Enter para continuar...");
-            // Limpa o buffer de entrada (consome o '\n' do scanf anterior)
-            while (getchar() != '\n'); 
-            // Espera o usuário pressionar Enter
-            getchar(); 
+            while (getchar() != '\n'); // Limpa o buffer de entrada
+            getchar(); // Espera o Enter
         }
 
-    } while (opcao != 0); // O loop continua enquanto a opção não for 0
+    } while (opcao != 0);
 
-    return 0; // Fim do programa
+    return 0;
 }
 
 /**
- * Função: inserirItem
- * Permite o cadastro de um novo item no inventário.
- * 1. Verifica se a mochila está cheia.
- * 2. Pede ao usuário o nome, tipo e quantidade do item.
- * 3. Adiciona o item na próxima posição livre do vetor.
- * 4. Incrementa o contador 'totalItens'.
- * 5. Lista os itens (requisito funcional).
+ * Função: inserirPecaFila (Enqueue)
+ * Adiciona uma nova peça ao FINAL da fila circular.
+ * 1. Verifica se a fila está cheia (usando 'contador').
+ * 2. Se não estiver cheia:
+ * a. Gera uma nova peça (usando 'gerarPeca').
+ * b. Adiciona a peça na posição 'fim'.
+ * c. Atualiza o índice 'fim' (com % para dar a volta).
+ * d. Incrementa o 'contador'.
  */
-void inserirItem() {
-    limparTela();
-    printf("--- Adicionar Novo Item ---\n");
-
-    // 1. Verifica se a mochila está cheia
-    if (totalItens >= MAX_ITENS) {
-        printf("A mochila esta cheia! Nao e possivel adicionar mais itens.\n");
-        return; // Retorna ao menu
-    }
-
-    // 2. Pede os dados do item
-    // Usa 'totalItens' como índice para o novo item
-    struct Item novoItem;
-
-    printf("Nome do item (sem espacos): ");
-    scanf("%s", novoItem.nome); // Lê o nome
-
-    printf("Tipo do item (arma, municao, cura, ferramenta): ");
-    scanf("%s", novoItem.tipo); // Lê o tipo
-
-    printf("Quantidade: ");
-    scanf("%d", &novoItem.quantidade); // Lê a quantidade
-
-    // 3. Adiciona o item na mochila
-    mochila[totalItens] = novoItem;
-
-    // 4. Incrementa o total de itens
-    totalItens++;
-
-    printf("\nItem '%s' adicionado com sucesso!\n", novoItem.nome);
-    
-    // 5. Lista os itens (requisito)
-    listarItens();
-}
-
-/**
- * Função: removerItem
- * Permite a exclusão de um item do inventário.
- * 1. Pede o nome do item a ser removido.
- * 2. Usa a função 'buscarIndicePorNome' para encontrá-lo.
- * 3. Se não encontrar, informa o usuário.
- * 4. Se encontrar, remove o item "puxando" todos os itens seguintes
- * uma posição para a esquerda ("shift-left").
- * 5. Decrementa o contador 'totalItens'.
- * 6. Lista os itens (requisito funcional).
- */
-void removerItem() {
-    limparTela();
-    printf("--- Remover Item ---\n");
-    
-    if (totalItens == 0) {
-        printf("A mochila esta vazia. Nao ha itens para remover.\n");
-        return;
-    }
-
-    // 1. Pede o nome
-    char nomeBusca[30];
-    printf("Digite o nome do item a remover: ");
-    scanf("%s", nomeBusca);
-
-    // 2. Busca o índice do item
-    int indice = buscarIndicePorNome(nomeBusca);
-
-    // 3. Se não encontrar
-    if (indice == -1) {
-        printf("\nItem '%s' nao encontrado na mochila.\n", nomeBusca);
+void inserirPecaFila() {
+    // 1. Verifica se a fila está cheia
+    if (contador >= TAMANHO_FILA) {
+        printf("\nAVISO: A fila de pecas esta cheia! Nao e possivel inserir.\n");
     } else {
-        // 4. Se encontrar, "puxa" os elementos (shift-left)
-        // Pega o nome do item antes de sobrescrevê-lo (para a msg)
-        char nomeRemovido[30];
-        strcpy(nomeRemovido, mochila[indice].nome);
-
-        for (int i = indice; i < totalItens - 1; i++) {
-            // Copia o item da posição [i+1] para a posição [i]
-            mochila[i] = mochila[i + 1];
-        }
-
-        // 5. Decrementa o total de itens
-        totalItens--;
+        // 2a. Gera a peça
+        Peca novaPeca = gerarPeca();
         
-        printf("\nItem '%s' removido com sucesso!\n", nomeRemovido);
+        // 2b. Adiciona na posição 'fim'
+        filaDePecas[fim] = novaPeca;
+        
+        // 2c. Atualiza o 'fim' de forma circular
+        // (Ex: se TAMANHO_FILA=5 e fim=4, (4+1)%5 = 0. Volta ao início)
+        fim = (fim + 1) % TAMANHO_FILA;
+        
+        // 2d. Incrementa o contador
+        contador++;
 
-        // 6. Lista os itens (requisito)
-        listarItens();
+        printf("\nNova peca [%c %d] inserida no final da fila.\n", novaPeca.nome, novaPeca.id);
     }
 }
 
 /**
- * Função: listarItens
- * Exibe todos os itens atualmente no inventário.
- * 1. Verifica se a mochila está vazia.
- * 2. Percorre o vetor 'mochila' de 0 até 'totalItens'.
- * 3. Imprime os dados de cada item formatados.
+ * Função: jogarPeca (Dequeue)
+ * Remove e "joga" a peça do INÍCIO da fila circular.
+ * 1. Verifica se a fila está vazia (usando 'contador').
+ * 2. Se não estiver vazia:
+ * a. Pega a peça da posição 'inicio'.
+ * b. Atualiza o índice 'inicio' (com % para dar a volta).
+ * c. Decrementa o 'contador'.
  */
-void listarItens() {
-    // Não limpa a tela, pois é chamada por outras funções
-    printf("\n--- Itens Atuais na Mochila (%d/%d) ---\n", totalItens, MAX_ITENS);
-
-    // 1. Verifica se está vazia
-    if (totalItens == 0) {
-        printf("A mochila esta vazia.\n");
-        return;
-    }
-
-    // 2. Percorre o vetor (lista sequencial)
-    for (int i = 0; i < totalItens; i++) {
-        printf("Item %d:\n", i + 1);
-        printf("  Nome: %s\n", mochila[i].nome);
-        printf("  Tipo: %s\n", mochila[i].tipo);
-        printf("  Qtd.: %d\n", mochila[i].quantidade);
-        printf("-------------------\n");
-    }
-}
-
-/**
- * Função: buscarItem
- * Função de busca sequencial visível ao usuário.
- * 1. Pede o nome do item a ser buscado.
- * 2. Usa a função 'buscarIndicePorNome' para encontrá-lo.
- * 3. Se encontrar, exibe os detalhes completos do item.
- * 4. Se não encontrar, informa o usuário.
- */
-void buscarItem() {
-    limparTela();
-    printf("--- Buscar Item na Mochila ---\n");
-
-    if (totalItens == 0) {
-        printf("A mochila esta vazia. Nao ha itens para buscar.\n");
-        return;
-    }
-
-    // 1. Pede o nome
-    char nomeBusca[30];
-    printf("Digite o nome do item a buscar: ");
-    scanf("%s", nomeBusca);
-
-    // 2. Busca o índice
-    int indice = buscarIndicePorNome(nomeBusca);
-
-    // 3. Se encontrar
-    if (indice != -1) {
-        printf("\nItem encontrado!\n");
-        printf("-------------------\n");
-        printf("  Nome: %s\n", mochila[indice].nome);
-        printf("  Tipo: %s\n", mochila[indice].tipo);
-        printf("  Qtd.: %d\n", mochila[indice].quantidade);
-        printf("-------------------\n");
+void jogarPeca() {
+    // 1. Verifica se a fila está vazia
+    if (contador == 0) {
+        printf("\nAVISO: A fila de pecas esta vazia! Nao ha pecas para jogar.\n");
     } else {
-        // 4. Se não encontrar
-        printf("\nItem '%s' nao encontrado na mochila.\n", nomeBusca);
+        // 2a. Pega a peça do 'inicio'
+        Peca pecaJogada = filaDePecas[inicio];
+        
+        // 2b. Atualiza o 'inicio' de forma circular
+        inicio = (inicio + 1) % TAMANHO_FILA;
+        
+        // 2c. Decrementa o contador
+        contador--;
+
+        printf("\nPeca [%c %d] foi jogada (removida do inicio).\n", pecaJogada.nome, pecaJogada.id);
     }
 }
 
 /**
- * Função: buscarIndicePorNome (Função Auxiliar)
- * Realiza uma BUSCA SEQUENCIAL no vetor 'mochila'.
- * 1. Percorre o vetor de 0 até 'totalItens'.
- * 2. Compara o 'nomeBusca' com o nome de cada item na mochila.
- * 3. Se encontrar, retorna o ÍNDICE (posição no vetor) onde o item está.
- * 4. Se o loop terminar sem encontrar, retorna -1 (código de "não encontrado").
+ * Função: exibirFila
+ * Mostra o estado atual de todas as peças na fila,
+ * da primeira (inicio) até a última.
  */
-int buscarIndicePorNome(const char* nomeBusca) {
-    // 1. Percorre o vetor
-    for (int i = 0; i < totalItens; i++) {
-        // 2. Compara as strings (0 = são iguais)
-        if (strcmp(mochila[i].nome, nomeBusca) == 0) {
-            // 3. Retorna o índice
-            return i;
-        }
+void exibirFila() {
+    printf("Fila de pecas: ");
+    
+    if (contador == 0) {
+        printf("[VAZIA]\n");
+        return;
     }
-    // 4. Retorna "não encontrado"
-    return -1;
+
+    // Para exibir corretamente a fila circular, não podemos
+    // apenas iterar de 0 a TAMANHO_FILA.
+    // Devemos começar em 'inicio' e andar 'contador' passos.
+    int indiceAtual = inicio;
+    for (int i = 0; i < contador; i++) {
+        
+        Peca p = filaDePecas[indiceAtual];
+        printf("[%c %d] ", p.nome, p.id);
+        
+        // Move o índice de forma circular
+        indiceAtual = (indiceAtual + 1) % TAMANHO_FILA;
+    }
+    printf("\n");
+}
+
+/**
+ * Função: gerarPeca (Helper)
+ * Cria e retorna uma nova peça com um tipo aleatório
+ * (conforme solicitado: 'I', 'O', 'T', 'L')
+ * e um 'id' sequencial único.
+ */
+Peca gerarPeca() {
+    Peca novaPeca;
+    
+    // 1. Define o ID único e incrementa o contador global
+    novaPeca.id = proximoId++;
+    
+    // 2. Gera um tipo aleatório
+    char tiposPossiveis[] = {'I', 'O', 'T', 'L'}; // Conforme requisitos
+    int indiceAleatorio = rand() % 4; // Gera um número de 0 a 3
+    
+    novaPeca.nome = tiposPossiveis[indiceAleatorio];
+    
+    return novaPeca;
 }
 
 /**
  * Função: limparTela (Função de Usabilidade)
  * Limpa o console para melhorar a legibilidade da interface.
- * Usa comandos específicos do sistema operacional.
  */
 void limparTela() {
-    // Tenta "clear" (Linux/macOS) e "cls" (Windows)
-    // O '#ifdef _WIN32' é a forma mais correta, mas
-    // system() é mais simples para este nível.
-    
-    // system("clear || cls"); // Esta linha pode não funcionar em todos os terminais
-    
-    // Vamos usar uma alternativa mais simples: imprimir várias linhas
-    // para "empurrar" o conteúdo antigo para cima.
+    // "Empurra" o conteúdo antigo para cima
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 }
